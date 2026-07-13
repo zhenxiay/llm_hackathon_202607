@@ -8,7 +8,10 @@ via `requests` (same endpoint the team's original main.py used). Everything else
 """
 
 import json
+import logging
 import os
+import urllib.parse
+import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs
 
@@ -16,8 +19,17 @@ import vin_logic
 
 try:
     import requests
-except ImportError:  # pragma: no cover - requests is declared in pyproject
+except ImportError:  # requests is optional; we fall back to urllib (stdlib)
     requests = None
+
+# Debug logging. On by default; set DEBUG=0 to quiet it down.
+DEBUG = os.environ.get("DEBUG", "1").lower() not in ("0", "false", "no", "")
+logging.basicConfig(
+    level=logging.DEBUG if DEBUG else logging.INFO,
+    format="%(asctime)s %(levelname)-5s %(message)s",
+    datefmt="%H:%M:%S",
+)
+log = logging.getLogger("vin")
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 TEMPLATES = os.path.join(HERE, "templates")
@@ -36,17 +48,31 @@ def decode_vin(vin, model_year=None):
     """Decode a VIN via the NHTSA DecodeVinValues endpoint.
 
     Returns Results[0]: a flat dict of decoded fields (Make, Model, ModelYear,
-    BodyClass, ErrorCode, ErrorText, ...). Mirrors the team's original helper.
+    BodyClass, ErrorCode, ErrorText, ...). Uses `requests` when available and
+    otherwise falls back to the standard library, so no install is required.
     """
-    if requests is None:
-        raise RuntimeError("The 'requests' package is required (see pyproject.toml).")
-    url = "https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVinValues/{}".format(vin)
     params = {"format": "json"}
     if model_year:
         params["modelyear"] = model_year
-    resp = requests.get(url, params=params, timeout=30)
-    resp.raise_for_status()
-    return resp.json()["Results"][0]
+
+    backend = "requests" if requests is not None else "urllib"
+    log.debug("decode_vin: vin=%s year=%s backend=%s", vin, model_year, backend)
+
+    if requests is not None:
+        url = "https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVinValues/{}".format(vin)
+        resp = requests.get(url, params=params, timeout=30)
+        log.debug("decode_vin: GET %s -> HTTP %s", resp.url, resp.status_code)
+        resp.raise_for_status()
+        return resp.json()["Results"][0]
+
+    # stdlib fallback (no external dependencies needed)
+    url = "https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVinValues/{}?{}".format(
+        urllib.parse.quote(vin), urllib.parse.urlencode(params)
+    )
+    with urllib.request.urlopen(url, timeout=30) as handle:
+        log.debug("decode_vin: GET %s -> HTTP %s", url, handle.status)
+        data = json.loads(handle.read().decode("utf-8"))
+    return data["Results"][0]
 
 
 def build_decode_payload(vin):
@@ -56,13 +82,16 @@ def build_decode_payload(vin):
     friendly {"error": ...} rather than raising, so the UI can show a message.
     """
     vin = (vin or "").strip().upper()
+    log.info("build_decode_payload: vin=%r", vin)
 
     if len(vin) != 17:
+        log.warning("rejecting vin %r: length %d != 17", vin, len(vin))
         return {"error": "Please enter a valid 17-character VIN."}
 
     try:
         decoded = decode_vin(vin)
     except Exception as exc:  # network/SSL/HTTP problems land here
+        log.exception("decode_vin failed for %s", vin)
         return {
             "error": "Could not reach the VIN decoding service. "
                      "Check your connection and try again.",
@@ -74,10 +103,15 @@ def build_decode_payload(vin):
     model_year = (decoded.get("ModelYear") or "").strip()
     body_class = (decoded.get("BodyClass") or "").strip()
     error_code = (decoded.get("ErrorCode") or "").strip()
+    log.debug(
+        "decoded: make=%r model=%r year=%r body=%r errorCode=%r",
+        make, model, model_year, body_class, error_code,
+    )
 
     # ErrorCode "0" is a clean decode; anything else with no Make/Model is unusable.
     clean = error_code.split(",")[0].strip() in ("", "0")
-    if not make or not model:
+    if not make:
+        log.warning("vin %s decoded but no Make; returning error", vin)
         return {
             "error": "That VIN could not be decoded. Please double-check it and try again.",
             "error_text": (decoded.get("ErrorText") or "").strip(),
@@ -91,11 +125,15 @@ def build_decode_payload(vin):
 
     parts = vin_logic.filter_parts(make, model, year_int, vin_logic.load_catalog())
     breakdown = vin_logic.vin_breakdown(vin, year_int)
+    log.info(
+        "vin %s -> %s %s %s | %d part(s) | clean=%s",
+        vin, make, model or "Unknown", model_year or "?", len(parts), clean,
+    )
 
     return {
         "vehicle": {
             "make": make,
-            "model": model,
+            "model": model or "Unknown",
             "modelYear": model_year,
             "bodyClass": body_class or "Unknown",
         },
@@ -109,8 +147,8 @@ def build_decode_payload(vin):
 class Handler(BaseHTTPRequestHandler):
     server_version = "VINPartsFinder/1.0"
 
-    def log_message(self, fmt, *args):  # keep the console tidy for a live demo
-        pass
+    def log_message(self, format, *args):  # route stdlib access logs through our logger
+        log.debug("http: %s", format % args)
 
     def _send(self, status, body, content_type):
         if isinstance(body, str):
@@ -161,6 +199,11 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main():
+    proxies = {k: v for k, v in os.environ.items() if k.lower().endswith("_proxy")}
+    log.info("HTTP backend: %s", "requests" if requests is not None else "urllib (stdlib)")
+    log.info("proxy env: %s", proxies or "none")
+    log.info("debug logging: %s", "on" if DEBUG else "off (set DEBUG=1 to enable)")
+
     server = ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
     print("VIN Parts Finder running at http://localhost:{}".format(PORT))
     print("Press Ctrl+C to stop.")
