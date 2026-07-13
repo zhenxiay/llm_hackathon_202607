@@ -1,0 +1,160 @@
+{
+  "parts": [
+    {
+      "id": 1,
+      "name": "Oil Filter",
+      "category": "Fluid & Filters",
+      "price": 9.99,
+      "description": "High-efficiency oil filter for optimal engine protection and performance.",
+      "fitment": {
+        "makes": ["Honda", "Toyota", "Ford", "Chevrolet"],
+        "models": ["Civic", "Accord", "Camry", "F-150", "Silverado", "Malibu"],
+        "yearMin": 2010,
+        "yearMax": 2024
+      }
+    },
+    {
+      "id": 2,
+      "name": "Brake Pads",
+      "category": "Brakes",
+      "price": 49.99,
+      "description": "Ceramic brake pads with superior stopping power and reduced dust.",
+      "fitment": {
+        "makes": ["Honda", "Toyota", "Ford"],
+        "models": ["Civic", "Accord", "Camry", "F-150"],
+        "yearMin": 2012,
+        "yearMax": 2024
+      }
+    },
+    {
+      "id": 3,
+      "name": "Air Filter",
+      "category": "Fluid & Filters",
+      "price": 14.99,
+      "description": "OEM-quality air filter for improved fuel efficiency and engine performance.",
+      "fitment": {
+        "makes": ["Honda", "Toyota", "Ford", "Chevrolet"],
+        "models": ["Civic", "Accord", "Camry", "Altima", "F-150", "Silverado"],
+        "yearMin": 2010,
+        "yearMax": 2024
+      }
+    },
+    {
+      "id": 4,
+      "name": "Wiper Blades",
+      "category": "Exterior",
+      "price": 24.99,
+      "description": "All-weather wiper blades for clear visibility in any condition.",
+      "fitment": {
+        "makes": ["Honda", "Toyota", "Ford", "Chevrolet", "Nissan"],
+        "models": ["Civic", "Accord", "Camry", "Altima", "F-150", "Silverado", "Malibu"],
+        "yearMin": 2010,
+        "yearMax": 2024
+      }
+    },
+    {
+      "id": 5,
+      "name": "Battery",
+      "category": "Electrical",
+      "price": 129.99,
+      "description": "Heavy-duty battery with 600 CCA for reliable cold-weather starting.",
+      "fitment": {
+        "makes": ["Honda", "Toyota", "Ford", "Chevrolet"],
+        "models": ["Civic", "Accord", "Camry", "F-150", "Silverado"],
+        "yearMin": 2010,
+        "yearMax": 2024
+      }
+    },
+    {
+      "id": 6,
+      "name": "Spark Plugs",
+      "category": "Ignition",
+      "price": 19.99,
+      "description": "Premium spark plugs for improved fuel economy and smooth acceleration.",
+      "fitment": {
+        "makes": ["Honda", "Toyota", "Nissan"],
+        "models": ["Civic", "Accord", "Camry", "Altima"],
+        "yearMin": 2012,
+        "yearMax": 2024
+      }
+    },
+    {
+      "id": 7,
+      "name": "Cabin Air Filter",
+      "category": "Fluid & Filters",
+      "price": 16.99,
+      "description": "Activated charcoal cabin air filter removes odors and improves air quality.",
+      "fitment": {
+        "makes": ["Honda", "Toyota", "Ford", "Chevrolet", "Nissan"],
+        "models": ["Civic", "Accord", "Camry", "Altima", "F-150", "Silverado", "Malibu"],
+        "yearMin": 2012,
+        "yearMax": 2024
+      }
+    },
+    {
+      "id": 8,
+      "name": "Transmission Fluid",
+      "category": "Fluids",
+      "price": 22.99,
+      "description": "Full synthetic transmission fluid for smooth shifting and extended component life.",
+      "fitment": {
+        "makes": ["Honda", "Toyota", "Ford"],
+        "models": ["Civic", "Accord", "Camry", "F-150"],
+        "yearMin": 2015,
+        "yearMax": 2024
+      }
+    },
+    {
+      "id": 9,
+      "name": "Coolant",
+      "category": "Fluids",
+      "price": 18.99,
+      "description": "Premium coolant with extended life formula for year-round protection.",
+      "fitment": {
+        "makes": ["Honda", "Toyota", "Ford", "Chevrolet", "Nissan"],
+        "models": ["Civic", "Accord", "Camry", "Altima", "F-150", "Silverado", "Malibu"],
+        "yearMin": 2010,
+        "yearMax": 2024
+      }
+    },
+    {
+      "id": 10,
+      "name": "Fuel Filter",
+      "category": "Fluid & Filters",
+      "price": 12.99,
+      "description": "High-quality fuel filter protects fuel injectors and improves engine performance.",
+      "fitment": {
+        "makes": ["Honda", "Toyota", "Ford", "Chevrolet"],
+        "models": ["Civic", "Accord", "Camry", "F-150", "Silverado", "Malibu"],
+        "yearMin": 2010,
+        "yearMax": 2024
+      }
+    },
+    {
+      "id": 11,
+      "name": "Brake Fluid",
+      "category": "Brakes",
+      "price": 8.99,
+      "description": "DOT 4 brake fluid with high boiling point for superior braking performance.",
+      "fitment": {
+        "makes": ["Honda", "Toyota", "Ford", "Chevrolet", "Nissan"],
+        "models": ["Civic", "Accord", "Camry", "Altima", "F-150", "Silverado", "Malibu"],
+        "yearMin": 2010,
+        "yearMax": 2024
+      }
+    },
+    {
+      "id": 12,
+      "name": "Windshield Washer Fluid",
+      "category": "Exterior",
+      "price": 6.99,
+      "description": "Premium washer fluid with anti-freeze protection and superior cleaning power.",
+      "fitment": {
+        "makes": ["Honda", "Toyota", "Ford", "Chevrolet", "Nissan"],
+        "models": ["Civic", "Accord", "Camry", "Altima", "F-150", "Silverado", "Malibu"],
+        "yearMin": 2010,
+        "yearMax": 2024
+      }
+    }
+  ]
+}

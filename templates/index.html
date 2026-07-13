@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VIN Parts Finder</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>VIN Parts Finder</h1>
+            <p>Decode a VIN and find compatible parts</p>
+        </header>
+
+        <main>
+            <section class="input-section">
+                <div class="input-group">
+                    <input
+                        type="text"
+                        id="vinInput"
+                        placeholder="Enter VIN (17 characters)"
+                        maxlength="17"
+                        autocomplete="off"
+                        spellcheck="false"
+                    >
+                    <button id="decodeBtn" class="btn-primary">Decode</button>
+                </div>
+                <div class="samples">
+                    <span>Try:</span>
+                    <button class="sample" data-vin="2HGFC2F5XHH500000">Honda Civic 2017</button>
+                    <button class="sample" data-vin="4T1BF1FK2CU500000">Toyota Camry 2012</button>
+                    <button class="sample" data-vin="1FTFW1E57MF500000">Ford F-150 2021</button>
+                    <button class="sample" data-vin="1HGCM82633A004352">Honda Accord 2003</button>
+                </div>
+                <div id="loadingSpinner" class="loading hidden">
+                    <div class="spinner"></div>
+                    <p>Decoding VIN...</p>
+                </div>
+                <div id="errorMessage" class="error-message hidden"></div>
+            </section>
+
+            <section id="vehicleSection" class="vehicle-section hidden">
+                <div class="vehicle-card">
+                    <h2>Vehicle Information</h2>
+                    <div class="vehicle-info">
+                        <div class="info-row">
+                            <span class="label">Make</span>
+                            <span id="vehicleMake" class="value">&mdash;</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Model</span>
+                            <span id="vehicleModel" class="value">&mdash;</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Year</span>
+                            <span id="vehicleYear" class="value">&mdash;</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Body Class</span>
+                            <span id="vehicleBody" class="value">&mdash;</span>
+                        </div>
+                    </div>
+
+                    <div class="breakdown">
+                        <h3>VIN Breakdown</h3>
+                        <div id="vinBoxes" class="vin-boxes"></div>
+                        <div id="vinLegend" class="vin-legend"></div>
+                        <div id="vinWarning" class="vin-warning hidden"></div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="partsSection" class="parts-section hidden">
+                <h2>Compatible Parts</h2>
+                <div id="noPartsMessage" class="no-results hidden">
+                    <p>No compatible parts found for this vehicle.</p>
+                </div>
+                <div id="partsList" class="parts-list"></div>
+            </section>
+        </main>
+
+        <footer class="footer">
+            <p>VIN data from NHTSA vPIC. Parts catalog is synthetic demo data.</p>
+        </footer>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

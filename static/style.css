@@ -1,0 +1,370 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    padding: 20px;
+    color: #333;
+}
+
+.container {
+    max-width: 860px;
+    margin: 0 auto;
+}
+
+.header {
+    text-align: center;
+    color: white;
+    margin-bottom: 32px;
+}
+
+.header h1 {
+    font-size: 2.5rem;
+    margin-bottom: 8px;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.header p {
+    font-size: 1.1rem;
+    opacity: 0.95;
+}
+
+.input-section {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    margin-bottom: 28px;
+}
+
+.input-group {
+    display: flex;
+    gap: 10px;
+}
+
+#vinInput {
+    flex: 1;
+    padding: 12px 16px;
+    font-size: 1rem;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    transition: border-color 0.2s;
+}
+
+#vinInput:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.btn-primary {
+    padding: 12px 28px;
+    font-size: 1rem;
+    font-weight: 600;
+    color: white;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.btn-primary:active {
+    transform: translateY(0);
+}
+
+.samples {
+    margin-top: 14px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: #888;
+}
+
+.sample {
+    background: #f2f3f7;
+    border: 1px solid #e0e0e0;
+    color: #555;
+    padding: 5px 10px;
+    border-radius: 14px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+
+.sample:hover {
+    background: #667eea;
+    color: white;
+    border-color: #667eea;
+}
+
+.loading {
+    text-align: center;
+    padding: 20px;
+}
+
+.spinner {
+    width: 38px;
+    height: 38px;
+    border: 4px solid #f0f0f0;
+    border-top: 4px solid #667eea;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 10px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.loading p {
+    color: #667eea;
+    font-weight: 500;
+}
+
+.error-message {
+    background: #fee;
+    color: #c33;
+    padding: 15px;
+    border-radius: 8px;
+    border-left: 4px solid #c33;
+    margin-top: 15px;
+    font-weight: 500;
+}
+
+.hidden {
+    display: none;
+}
+
+.vehicle-section {
+    margin-bottom: 28px;
+}
+
+.vehicle-card {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.vehicle-card h2 {
+    color: #667eea;
+    margin-bottom: 20px;
+    font-size: 1.5rem;
+}
+
+.vehicle-info {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+}
+
+.info-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.info-row .label {
+    font-weight: 600;
+    color: #999;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.info-row .value {
+    font-size: 1.2rem;
+    color: #333;
+    font-weight: 500;
+}
+
+/* ---- VIN breakdown ---- */
+.breakdown {
+    margin-top: 26px;
+    border-top: 1px solid #eee;
+    padding-top: 20px;
+}
+
+.breakdown h3 {
+    color: #555;
+    font-size: 1.1rem;
+    margin-bottom: 14px;
+}
+
+.vin-boxes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.vin-seg {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
+
+.vin-seg-chars {
+    display: flex;
+    gap: 3px;
+}
+
+.vin-char {
+    width: 30px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #fff;
+    border-radius: 6px;
+}
+
+.vin-seg-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: #666;
+}
+
+/* section colors */
+.seg-wmi    .vin-char { background: #5b8def; }
+.seg-vds    .vin-char { background: #7c6ce0; }
+.seg-check  .vin-char { background: #e0873b; }
+.seg-year   .vin-char { background: #2fa27a; }
+.seg-plant  .vin-char { background: #c05fa8; }
+.seg-serial .vin-char { background: #8a94a6; }
+
+.vin-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-top: 16px;
+    font-size: 0.82rem;
+    color: #555;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.legend-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    flex-shrink: 0;
+}
+
+.vin-warning {
+    margin-top: 14px;
+    background: #fff8e6;
+    border-left: 4px solid #e0a83b;
+    color: #8a6414;
+    padding: 10px 14px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+}
+
+/* ---- parts ---- */
+.parts-section h2 {
+    color: white;
+    font-size: 1.7rem;
+    margin-bottom: 18px;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.no-results {
+    background: white;
+    padding: 40px;
+    border-radius: 12px;
+    text-align: center;
+    color: #999;
+    font-size: 1.1rem;
+}
+
+.parts-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 18px;
+}
+
+.part-card {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.part-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.part-card h3 {
+    color: #667eea;
+    margin-bottom: 8px;
+    font-size: 1.15rem;
+}
+
+.part-category {
+    display: inline-block;
+    background: #f0f0f0;
+    color: #666;
+    padding: 3px 12px;
+    border-radius: 12px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.part-price {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #764ba2;
+    margin-bottom: 10px;
+}
+
+.part-description {
+    color: #666;
+    line-height: 1.5;
+    font-size: 0.92rem;
+}
+
+.footer {
+    text-align: center;
+    color: white;
+    opacity: 0.8;
+    margin-top: 36px;
+    font-size: 0.85rem;
+}
+
+@media (max-width: 640px) {
+    .header h1 { font-size: 1.8rem; }
+    .input-group { flex-direction: column; }
+    .vehicle-info { grid-template-columns: 1fr; }
+    .parts-list { grid-template-columns: 1fr; }
+    .input-section, .vehicle-card { padding: 20px; }
+}
