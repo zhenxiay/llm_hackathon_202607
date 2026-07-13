@@ -8,28 +8,57 @@ via `requests` (same endpoint the team's original main.py used). Everything else
 """
 
 import json
-import logging
 import os
-import urllib.parse
-import urllib.request
+import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs
 
+
+def _ensure_windows_ssl_dlls():
+    """Make Python's SSL usable when launched outside an activated conda env.
+
+    Anaconda/Miniconda ship the OpenSSL DLLs that `_ssl` needs under the env's
+    Library dirs. If Python is started without `conda activate` (e.g. from Git
+    Bash, PowerShell, or a bare `python main.py`), those dirs aren't on PATH and
+    `import ssl` fails with "DLL load failed while importing _ssl", which surfaces
+    as "the SSL module is not available" when `requests` makes an HTTPS call.
+
+    Prepending the conda Library dirs to PATH (what `conda activate` does) fixes
+    it. No-op on non-conda interpreters, where these dirs don't exist and SSL
+    already works.
+    """
+    if sys.platform != "win32":
+        return
+    base = os.path.dirname(sys.executable)
+    candidates = [
+        base,
+        os.path.join(base, "Library", "mingw-w64", "bin"),
+        os.path.join(base, "Library", "usr", "bin"),
+        os.path.join(base, "Library", "bin"),
+        os.path.join(base, "Scripts"),
+    ]
+    existing = [d for d in candidates if os.path.isdir(d)]
+    if not existing:
+        return
+    os.environ["PATH"] = os.pathsep.join(existing) + os.pathsep + os.environ.get("PATH", "")
+    for d in existing:
+        try:
+            os.add_dll_directory(d)
+        except (OSError, AttributeError):
+            pass
+
+
+_ensure_windows_ssl_dlls()
+
 import vin_logic
+import llm
 
 try:
     import requests
-except ImportError:  # requests is optional; we fall back to urllib (stdlib)
+except ImportError:  # pragma: no cover - requests is declared in pyproject
     requests = None
 
-# Debug logging. On by default; set DEBUG=0 to quiet it down.
-DEBUG = os.environ.get("DEBUG", "1").lower() not in ("0", "false", "no", "")
-logging.basicConfig(
-    level=logging.DEBUG if DEBUG else logging.INFO,
-    format="%(asctime)s %(levelname)-5s %(message)s",
-    datefmt="%H:%M:%S",
-)
-log = logging.getLogger("vin")
+MAX_CHAT_BODY = 256 * 1024  # cap request body size for /api/chat
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 TEMPLATES = os.path.join(HERE, "templates")
@@ -48,31 +77,47 @@ def decode_vin(vin, model_year=None):
     """Decode a VIN via the NHTSA DecodeVinValues endpoint.
 
     Returns Results[0]: a flat dict of decoded fields (Make, Model, ModelYear,
-    BodyClass, ErrorCode, ErrorText, ...). Uses `requests` when available and
-    otherwise falls back to the standard library, so no install is required.
+    BodyClass, ErrorCode, ErrorText, ...). Mirrors the team's original helper.
     """
+    if requests is None:
+        raise RuntimeError("The 'requests' package is required (see pyproject.toml).")
+    url = "https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVinValues/{}".format(vin)
     params = {"format": "json"}
     if model_year:
         params["modelyear"] = model_year
+    resp = requests.get(url, params=params, timeout=30)
+    resp.raise_for_status()
+    return resp.json()["Results"][0]
 
-    backend = "requests" if requests is not None else "urllib"
-    log.debug("decode_vin: vin=%s year=%s backend=%s", vin, model_year, backend)
 
-    if requests is not None:
-        url = "https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVinValues/{}".format(vin)
-        resp = requests.get(url, params=params, timeout=30)
-        log.debug("decode_vin: GET %s -> HTTP %s", resp.url, resp.status_code)
-        resp.raise_for_status()
-        return resp.json()["Results"][0]
+def fetch_vehicle_image(make, model):
+    """Best-effort thumbnail URL for the vehicle from Wikipedia (no API key).
 
-    # stdlib fallback (no external dependencies needed)
-    url = "https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVinValues/{}?{}".format(
-        urllib.parse.quote(vin), urllib.parse.urlencode(params)
-    )
-    with urllib.request.urlopen(url, timeout=30) as handle:
-        log.debug("decode_vin: GET %s -> HTTP %s", url, handle.status)
-        data = json.loads(handle.read().decode("utf-8"))
-    return data["Results"][0]
+    Tries "{Make} {Model}" then "{Make}". Returns None on any failure so the UI
+    simply hides the image. Uses `requests`; the proxy is picked up from the env.
+    """
+    if requests is None or not make:
+        return None
+    from urllib.parse import quote
+
+    candidates = []
+    if model:
+        candidates.append("{} {}".format(make, model))
+    candidates.append(make)
+    headers = {"User-Agent": "VINPartsFinder/1.0 (hackathon demo)"}
+    for title in candidates:
+        url = "https://en.wikipedia.org/api/rest_v1/page/summary/" + quote(title.replace(" ", "_"))
+        try:
+            resp = requests.get(url, headers=headers, timeout=8)
+            if resp.status_code != 200:
+                continue
+            data = resp.json()
+            thumb = (data.get("thumbnail") or {}).get("source")
+            if thumb:
+                return thumb
+        except Exception:
+            continue
+    return None
 
 
 def build_decode_payload(vin):
@@ -82,16 +127,13 @@ def build_decode_payload(vin):
     friendly {"error": ...} rather than raising, so the UI can show a message.
     """
     vin = (vin or "").strip().upper()
-    log.info("build_decode_payload: vin=%r", vin)
 
     if len(vin) != 17:
-        log.warning("rejecting vin %r: length %d != 17", vin, len(vin))
         return {"error": "Please enter a valid 17-character VIN."}
 
     try:
         decoded = decode_vin(vin)
     except Exception as exc:  # network/SSL/HTTP problems land here
-        log.exception("decode_vin failed for %s", vin)
         return {
             "error": "Could not reach the VIN decoding service. "
                      "Check your connection and try again.",
@@ -103,15 +145,10 @@ def build_decode_payload(vin):
     model_year = (decoded.get("ModelYear") or "").strip()
     body_class = (decoded.get("BodyClass") or "").strip()
     error_code = (decoded.get("ErrorCode") or "").strip()
-    log.debug(
-        "decoded: make=%r model=%r year=%r body=%r errorCode=%r",
-        make, model, model_year, body_class, error_code,
-    )
 
     # ErrorCode "0" is a clean decode; anything else with no Make/Model is unusable.
     clean = error_code.split(",")[0].strip() in ("", "0")
-    if not make:
-        log.warning("vin %s decoded but no Make; returning error", vin)
+    if not make or not model:
         return {
             "error": "That VIN could not be decoded. Please double-check it and try again.",
             "error_text": (decoded.get("ErrorText") or "").strip(),
@@ -124,18 +161,17 @@ def build_decode_payload(vin):
         year_int = None
 
     parts = vin_logic.filter_parts(make, model, year_int, vin_logic.load_catalog())
+    parts = vin_logic.with_pricing(parts)
     breakdown = vin_logic.vin_breakdown(vin, year_int)
-    log.info(
-        "vin %s -> %s %s %s | %d part(s) | clean=%s",
-        vin, make, model or "Unknown", model_year or "?", len(parts), clean,
-    )
+    image = fetch_vehicle_image(make, model)
 
     return {
         "vehicle": {
             "make": make,
-            "model": model or "Unknown",
+            "model": model,
             "modelYear": model_year,
             "bodyClass": body_class or "Unknown",
+            "image": image,
         },
         "breakdown": breakdown,
         "parts": parts,
@@ -147,8 +183,8 @@ def build_decode_payload(vin):
 class Handler(BaseHTTPRequestHandler):
     server_version = "VINPartsFinder/1.0"
 
-    def log_message(self, format, *args):  # route stdlib access logs through our logger
-        log.debug("http: %s", format % args)
+    def log_message(self, fmt, *args):  # keep the console tidy for a live demo
+        pass
 
     def _send(self, status, body, content_type):
         if isinstance(body, str):
@@ -197,13 +233,47 @@ class Handler(BaseHTTPRequestHandler):
 
         self._send(404, "Not found", "text/plain; charset=utf-8")
 
+    def do_POST(self):
+        parsed = urlparse(self.path)
+        if parsed.path != "/api/chat":
+            self._send(404, "Not found", "text/plain; charset=utf-8")
+            return
+
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            length = 0
+        if length <= 0 or length > MAX_CHAT_BODY:
+            self._send_json({"error": "Invalid request size."}, status=400)
+            return
+
+        try:
+            body = json.loads(self.rfile.read(length).decode("utf-8"))
+        except (ValueError, UnicodeDecodeError):
+            self._send_json({"error": "Invalid JSON."}, status=400)
+            return
+
+        vehicle = body.get("vehicle") or {}
+        messages = body.get("messages") or []
+        try:
+            reply = llm.chat(vehicle, messages)
+            self._send_json({"reply": reply})
+        except llm.NotConfigured as exc:
+            self._send_json({"error": str(exc)}, status=200)
+        except ValueError as exc:
+            self._send_json({"error": str(exc)}, status=400)
+        except Exception as exc:
+            self._send_json(
+                {
+                    "error": "The AI assistant is temporarily unavailable. "
+                             "Please try again.",
+                    "detail": "{}: {}".format(type(exc).__name__, exc),
+                },
+                status=200,
+            )
+
 
 def main():
-    proxies = {k: v for k, v in os.environ.items() if k.lower().endswith("_proxy")}
-    log.info("HTTP backend: %s", "requests" if requests is not None else "urllib (stdlib)")
-    log.info("proxy env: %s", proxies or "none")
-    log.info("debug logging: %s", "on" if DEBUG else "off (set DEBUG=1 to enable)")
-
     server = ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
     print("VIN Parts Finder running at http://localhost:{}".format(PORT))
     print("Press Ctrl+C to stop.")

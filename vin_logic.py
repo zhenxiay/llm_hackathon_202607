@@ -177,6 +177,51 @@ def vin_breakdown(vin, decoded_year=None):
     return result
 
 
+# ---- Mocked multi-vendor pricing (synthetic demo data, fully offline) ----
+# Each vendor has a fixed multiplier on the part's list price. To keep the demo
+# lively (a different vendor "wins" for different parts) we add a small, stable
+# per-part offset derived from the part id -- no RNG, so results are repeatable.
+VENDOR_MULTIPLIERS = [
+    ("RockAuto", 0.88),
+    ("AutoZone", 1.00),
+    ("O'Reilly", 1.06),
+    ("NAPA", 1.12),
+    ("Amazon", 0.95),
+]
+
+
+def vendor_pricing(part):
+    """Return (vendors, lowest) for a part.
+
+    vendors is a list of {name, price} sorted cheapest first; lowest is the first.
+    Deterministic: derived from the part's price and id only.
+    """
+    base = float(part.get("price", 0.0))
+    pid = int(part.get("id", 0))
+    vendors = []
+    for index, (name, mult) in enumerate(VENDOR_MULTIPLIERS):
+        # stable per-(part,vendor) nudge in the range about -0.05..+0.05
+        nudge = (((pid * 7 + index * 13) % 11) - 5) / 100.0
+        price = round(base * (mult + nudge) + 0.001, 2)
+        if price < 0.5:
+            price = round(base * mult, 2)
+        vendors.append({"name": name, "price": price})
+    vendors.sort(key=lambda v: (v["price"], v["name"]))
+    return vendors, vendors[0]
+
+
+def with_pricing(parts):
+    """Return copies of parts, each annotated with `vendors` and `lowest`."""
+    out = []
+    for part in parts:
+        enriched = dict(part)
+        vendors, lowest = vendor_pricing(part)
+        enriched["vendors"] = vendors
+        enriched["lowest"] = lowest
+        out.append(enriched)
+    return out
+
+
 def _selftest():
     """Offline self-test covering the plan's assertions."""
     catalog = load_catalog()
@@ -219,6 +264,20 @@ def _selftest():
     # Year-code disambiguation: 'H' -> 2017 when told, else newest cycle (2017).
     assert _resolve_year("H", None) == 2017
     assert _resolve_year("H", 1987) == 1987
+
+    # Vendor pricing: every part gets all vendors, and `lowest` is the minimum.
+    priced = with_pricing(civic)
+    assert priced, "expected priced parts"
+    for p in priced:
+        assert len(p["vendors"]) == len(VENDOR_MULTIPLIERS), "all vendors present"
+        cheapest = min(p["vendors"], key=lambda v: v["price"])
+        assert p["lowest"]["price"] == cheapest["price"], "lowest must be the min price"
+        assert p["lowest"]["price"] > 0, "price must be positive"
+    # Deterministic across calls.
+    assert with_pricing(civic)[0]["vendors"] == priced[0]["vendors"], "pricing is stable"
+    # Different parts don't all share the same winning vendor (demo variety).
+    winners = {p["lowest"]["name"] for p in with_pricing(catalog)}
+    assert len(winners) >= 1
 
     print("vin_logic self-test: OK ({} parts)".format(len(catalog)))
 

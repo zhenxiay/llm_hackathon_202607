@@ -43,22 +43,25 @@
             <section id="vehicleSection" class="vehicle-section hidden">
                 <div class="vehicle-card">
                     <h2>Vehicle Information</h2>
-                    <div class="vehicle-info">
-                        <div class="info-row">
-                            <span class="label">Make</span>
-                            <span id="vehicleMake" class="value">&mdash;</span>
-                        </div>
-                        <div class="info-row">
-                            <span class="label">Model</span>
-                            <span id="vehicleModel" class="value">&mdash;</span>
-                        </div>
-                        <div class="info-row">
-                            <span class="label">Year</span>
-                            <span id="vehicleYear" class="value">&mdash;</span>
-                        </div>
-                        <div class="info-row">
-                            <span class="label">Body Class</span>
-                            <span id="vehicleBody" class="value">&mdash;</span>
+                    <div class="vehicle-top">
+                        <img id="vehicleImage" class="vehicle-image hidden" alt="" >
+                        <div class="vehicle-info">
+                            <div class="info-row">
+                                <span class="label">Make</span>
+                                <span id="vehicleMake" class="value">&mdash;</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="label">Model</span>
+                                <span id="vehicleModel" class="value">&mdash;</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="label">Year</span>
+                                <span id="vehicleYear" class="value">&mdash;</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="label">Body Class</span>
+                                <span id="vehicleBody" class="value">&mdash;</span>
+                            </div>
                         </div>
                     </div>
 
@@ -77,6 +80,28 @@
                     <p>No compatible parts found for this vehicle.</p>
                 </div>
                 <div id="partsList" class="parts-list"></div>
+            </section>
+
+            <section id="chatSection" class="chat-section hidden">
+                <h2>Ask about this vehicle</h2>
+                <div class="chat-card">
+                    <div id="chatLog" class="chat-log">
+                        <div class="chat-hint">
+                            Ask anything about this vehicle &mdash; maintenance intervals,
+                            common problems, which parts to check. Powered by Claude on the
+                            Bosch LLM Farm.
+                        </div>
+                    </div>
+                    <div class="chat-input-row">
+                        <input
+                            type="text"
+                            id="chatInput"
+                            placeholder="e.g. What maintenance is due around 60,000 miles?"
+                            autocomplete="off"
+                        >
+                        <button id="chatSend" class="btn-primary">Send</button>
+                    </div>
+                </div>
             </section>
         </main>
 

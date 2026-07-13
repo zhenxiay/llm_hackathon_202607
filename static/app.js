@@ -11,6 +11,15 @@ const noPartsMessage = document.getElementById('noPartsMessage');
 const vinBoxes = document.getElementById('vinBoxes');
 const vinLegend = document.getElementById('vinLegend');
 const vinWarning = document.getElementById('vinWarning');
+const vehicleImage = document.getElementById('vehicleImage');
+const chatSection = document.getElementById('chatSection');
+const chatLog = document.getElementById('chatLog');
+const chatInput = document.getElementById('chatInput');
+const chatSend = document.getElementById('chatSend');
+
+// Conversation state for the AI chat, plus the currently decoded vehicle context.
+let currentVehicle = null;
+let chatMessages = [];
 
 const SECTION_COLORS = {
     wmi: '#5b8def',
@@ -49,6 +58,7 @@ async function decodeVIN() {
     showLoading(true);
     vehicleSection.classList.add('hidden');
     partsSection.classList.add('hidden');
+    chatSection.classList.add('hidden');
 
     try {
         const resp = await fetch('/api/decode?vin=' + encodeURIComponent(vin));
@@ -62,6 +72,7 @@ async function decodeVIN() {
         displayVehicleInfo(data.vehicle);
         renderVinBreakdown(data.breakdown);
         displayParts(data.parts);
+        setupChat(data.vehicle);
     } catch (err) {
         console.error('decode failed', err);
         showError('Something went wrong contacting the server. Please try again.');
@@ -75,6 +86,17 @@ function displayVehicleInfo(vehicle) {
     document.getElementById('vehicleModel').textContent = vehicle.model || 'Unknown';
     document.getElementById('vehicleYear').textContent = vehicle.modelYear || 'Unknown';
     document.getElementById('vehicleBody').textContent = vehicle.bodyClass || 'Unknown';
+
+    if (vehicle.image) {
+        vehicleImage.src = vehicle.image;
+        vehicleImage.alt = [vehicle.modelYear, vehicle.make, vehicle.model]
+            .filter(Boolean).join(' ');
+        vehicleImage.classList.remove('hidden');
+    } else {
+        vehicleImage.classList.add('hidden');
+        vehicleImage.removeAttribute('src');
+    }
+
     vehicleSection.classList.remove('hidden');
 }
 
@@ -167,9 +189,118 @@ function displayParts(parts) {
         card.appendChild(cat);
         card.appendChild(price);
         card.appendChild(desc);
+
+        if (part.lowest) {
+            const lowest = document.createElement('div');
+            lowest.className = 'part-lowest';
+            const listPrice = '$' + Number(part.price).toFixed(2);
+            lowest.innerHTML =
+                'Lowest: $' + Number(part.lowest.price).toFixed(2) +
+                ' · ' + escapeHtml(part.lowest.name) +
+                '<span class="strike">' + listPrice + '</span>';
+            card.appendChild(lowest);
+        }
+
+        if (part.vendors && part.vendors.length) {
+            const details = document.createElement('details');
+            details.className = 'part-vendors';
+            const summary = document.createElement('summary');
+            summary.textContent = 'Compare ' + part.vendors.length + ' vendors';
+            details.appendChild(summary);
+            const ul = document.createElement('ul');
+            part.vendors.forEach((v) => {
+                const li = document.createElement('li');
+                const name = document.createElement('span');
+                name.textContent = v.name;
+                const vp = document.createElement('span');
+                vp.className = 'v-price';
+                vp.textContent = '$' + Number(v.price).toFixed(2);
+                li.appendChild(name);
+                li.appendChild(vp);
+                ul.appendChild(li);
+            });
+            details.appendChild(ul);
+            card.appendChild(details);
+        }
+
         partsList.appendChild(card);
     });
 }
+
+function escapeHtml(s) {
+    return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+}
+
+// ---- AI chat ----
+function setupChat(vehicle) {
+    currentVehicle = vehicle;
+    chatMessages = [];
+    chatLog.innerHTML =
+        '<div class="chat-hint">Ask anything about this ' +
+        escapeHtml([vehicle.modelYear, vehicle.make, vehicle.model].filter(Boolean).join(' ')) +
+        ' — maintenance intervals, common problems, which parts to check. ' +
+        'Powered by Claude on the Bosch LLM Farm.</div>';
+    chatInput.value = '';
+    chatSection.classList.remove('hidden');
+}
+
+function appendChatMessage(role, text) {
+    const el = document.createElement('div');
+    el.className = 'chat-msg ' + role;
+    el.textContent = text;
+    chatLog.appendChild(el);
+    chatLog.scrollTop = chatLog.scrollHeight;
+    return el;
+}
+
+async function sendChat() {
+    const text = chatInput.value.trim();
+    if (!text) return;
+
+    appendChatMessage('user', text);
+    chatMessages.push({ role: 'user', content: text });
+    chatInput.value = '';
+    chatInput.disabled = true;
+    chatSend.disabled = true;
+
+    const typing = appendChatMessage('typing', 'Thinking…');
+
+    try {
+        const resp = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ vehicle: currentVehicle, messages: chatMessages }),
+        });
+        const data = await resp.json();
+        typing.remove();
+
+        if (data.error) {
+            appendChatMessage('error', data.error);
+            // Don't keep the unanswered user turn in history on failure.
+            chatMessages.pop();
+        } else {
+            appendChatMessage('assistant', data.reply);
+            chatMessages.push({ role: 'assistant', content: data.reply });
+        }
+    } catch (err) {
+        console.error('chat failed', err);
+        typing.remove();
+        appendChatMessage('error', 'Could not reach the assistant. Please try again.');
+        chatMessages.pop();
+    } finally {
+        chatInput.disabled = false;
+        chatSend.disabled = false;
+        chatInput.focus();
+    }
+}
+
+chatSend.addEventListener('click', sendChat);
+chatInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') sendChat();
+});
 
 function showLoading(show) {
     loadingSpinner.classList.toggle('hidden', !show);

@@ -6,4 +6,5 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "requests>=2.31",
+    "anthropic[vertex]>=0.40",
 ]
